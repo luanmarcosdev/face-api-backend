@@ -1,0 +1,141 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Face API",
+    "description": "API para validação de identidade através de comparação facial entre uma selfie e um documento.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Servidor local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "identity",
+      "description": "Recursos relacionados à validação de identidade"
+    }
+  ],
+  "paths": {
+    "/api/validar-identidade": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Validar identidade",
+        "description": "Compara o rosto presente em uma selfie com o rosto presente em um documento para validar a identidade.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "selfie",
+                  "documento"
+                ],
+                "properties": {
+                  "selfie": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Imagem contendo a selfie do usuário."
+                  },
+                  "documento": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Imagem do documento de identificação contendo o rosto do usuário."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validação processada com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Resultado retornado pelo processo de comparação facial.",
+                  "additionalProperties": true
+                },
+                "example": {
+                  "match": true,
+                  "distance": 0.42
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Selfie ou documento não enviados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Envie selfie e documento"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Não foi possível realizar a validação devido às imagens fornecidas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "noFaceDetected": {
+                    "summary": "Rosto não detectado",
+                    "value": {
+                      "error": "Não detectamos um rosto claro na imagem. Tente novamente."
+                    }
+                  },
+                  "multipleFaces": {
+                    "summary": "Múltiplos rostos detectados",
+                    "value": {
+                      "error": "Mais de um rosto detectado. Envie uma foto individual."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno durante o processamento da validação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Erro ao processar validação"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Mensagem descrevendo o erro ocorrido."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+services:
+  api:
+    container_name: face-api-backend
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/infra/model
+    command: npm run dev
