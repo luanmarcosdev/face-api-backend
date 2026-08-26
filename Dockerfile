@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y curl
 # Copia apenas arquivos de dependência
 COPY package*.json ./
 
-# Intala as dependencias
 RUN npm install
 
 RUN mkdir -p infra/model && cd infra/model && \
