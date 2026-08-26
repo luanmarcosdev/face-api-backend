@@ -7,24 +7,24 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000",
+      "url": "http://localhost:3001",
       "description": "Servidor local"
     }
   ],
   "tags": [
     {
-      "name": "identity",
-      "description": "Recursos relacionados à validação de identidade"
+      "name": "documents",
+      "description": "Recursos relacionados à análise e validação de documentos"
     }
   ],
   "paths": {
-    "/api/validar-identidade": {
+    "/api/documents/analize": {
       "post": {
         "tags": [
-          "identity"
+          "documents"
         ],
-        "summary": "Validar identidade",
-        "description": "Compara o rosto presente em uma selfie com o rosto presente em um documento para validar a identidade.",
+        "summary": "Analisar documento e validar identidade",
+        "description": "Recebe uma selfie e uma imagem de documento de identificação, realiza a comparação facial entre as imagens e retorna o resultado da validação de identidade.",
         "requestBody": {
           "required": true,
           "content": {
@@ -57,32 +57,59 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Resultado retornado pelo processo de comparação facial.",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/IdentityValidationResponse"
                 },
-                "example": {
-                  "match": true,
-                  "distance": 0.42
+                "examples": {
+                  "approved": {
+                    "summary": "Identidade validada",
+                    "value": {
+                      "status": true,
+                      "nivel": "alto",
+                      "sugestao": "Identidade validada",
+                      "distanciaCartografica": 0.42
+                    }
+                  },
+                  "rejected": {
+                    "summary": "Identidade não confirmada",
+                    "value": {
+                      "status": false,
+                      "nivel": "baixo",
+                      "sugestao": "Não foi possível confirmar a identidade, solicitar novos documentos",
+                      "distanciaCartografica": 0.87
+                    }
+                  }
                 }
               }
             }
           },
           "400": {
-            "description": "Selfie ou documento não enviados.",
+            "description": "Requisição inválida.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
-                "example": {
-                  "error": "Envie selfie e documento"
+                "examples": {
+                  "missingFiles": {
+                    "summary": "Arquivos não enviados",
+                    "value": {
+                      "error": "Envie selfie e documento"
+                    }
+                  },
+                  "invalidDistance": {
+                    "summary": "Distância cartográfica inválida",
+                    "value": {
+                      "success": false,
+                      "status": 400,
+                      "error": "Distância cartográfica inválida"
+                    }
+                  }
                 }
               }
             }
           },
           "422": {
-            "description": "Não foi possível realizar a validação devido às imagens fornecidas.",
+            "description": "Não foi possível realizar a comparação facial devido às imagens fornecidas.",
             "content": {
               "application/json": {
                 "schema": {
@@ -92,12 +119,16 @@
                   "noFaceDetected": {
                     "summary": "Rosto não detectado",
                     "value": {
+                      "success": false,
+                      "status": 422,
                       "error": "Não detectamos um rosto claro na imagem. Tente novamente."
                     }
                   },
                   "multipleFaces": {
                     "summary": "Múltiplos rostos detectados",
                     "value": {
+                      "success": false,
+                      "status": 422,
                       "error": "Mais de um rosto detectado. Envie uma foto individual."
                     }
                   }
@@ -113,6 +144,8 @@
                   "$ref": "#/components/schemas/Error"
                 },
                 "example": {
+                  "success": false,
+                  "status": 500,
                   "error": "Erro ao processar validação"
                 }
               }
@@ -124,17 +157,60 @@
   },
   "components": {
     "schemas": {
-      "Error": {
+      "IdentityValidationResponse": {
         "type": "object",
         "required": [
-          "error"
+          "status",
+          "nivel",
+          "sugestao",
+          "distanciaCartografica"
         ],
         "properties": {
-          "error": {
+          "status": {
+            "type": "boolean",
+            "description": "Indica se a identidade foi validada.",
+            "example": true
+          },
+          "nivel": {
             "type": "string",
-            "description": "Mensagem descrevendo o erro ocorrido."
+            "description": "Nível de confiança definido pela análise da distância facial.",
+            "example": "alto"
+          },
+          "sugestao": {
+            "type": "string",
+            "description": "Orientação baseada no resultado da validação.",
+            "example": "Identidade validada"
+          },
+          "distanciaCartografica": {
+            "type": "number",
+            "format": "double",
+            "description": "Distância calculada entre as representações faciais da selfie e do documento.",
+            "example": 0.42
           }
         }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a operação foi realizada com sucesso.",
+            "example": false
+          },
+          "status": {
+            "type": "integer",
+            "description": "Código HTTP retornado pela API.",
+            "example": 422
+          },
+          "error": {
+            "type": "string",
+            "description": "Mensagem descrevendo o erro ocorrido.",
+            "example": "Não detectamos um rosto claro na imagem. Tente novamente."
+          }
+        },
+        "required": [
+          "error"
+        ]
       }
     }
   }

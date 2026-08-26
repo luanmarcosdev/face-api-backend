@@ -1,51 +1,27 @@
-// import express from "express";
-// import cors from "cors";
-// import multer from "multer";
-// import { compareFaces } from "./faceService.js";
-// import swaggerUi from 'swagger-ui-express';
+const fs = require('fs');
 const express = require("express");
 const cors = require("cors");
-const multer = require("multer");
-const { compareFaces } = require("./faceService.js");
 const swaggerUi = require('swagger-ui-express');
-const fs = require('fs');
-
+const faceapi = require("face-api.js");
+const analizeRouter = require("./documents.analize.controller.js");
+const MODELS_PATH = __dirname + "/../infra/model";
 const app = express();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 const swaggerJson = JSON.parse(fs.readFileSync('./src/swagger.json', 'utf-8'));
 
 app.use(cors());
-
+app.use(express.json());
+app.use(analizeRouter);
 app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerJson));
-app.post(
-  "/api/validar-identidade",
-  upload.fields([
-    { name: "selfie", maxCount: 1 },
-    { name: "documento", maxCount: 1 },
-  ]),
-  async (req, res) => {
-    try {
-      if (!req.files?.selfie || !req.files?.documento) {
-        return res.status(400).json({ error: "Envie selfie e documento" });
-      }
 
-      const resultado = await compareFaces(
-        req.files.selfie[0].buffer,
-        req.files.documento[0].buffer
-      );
+async function bootstrap() {
+  await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODELS_PATH);
+  await faceapi.nets.faceLandmark68Net.loadFromDisk(MODELS_PATH);
+  await faceapi.nets.faceRecognitionNet.loadFromDisk(MODELS_PATH);
+  console.log("Models face-api started");
+  app.listen(3000, () => console.log("Listening on http://localhost:3000"));
+}
 
-      return res.json(resultado);
-    } catch (err) {
-      if (err.code === "NO_FACE_DETECTED") {
-        return res.status(422).json({ error: "Não detectamos um rosto claro na imagem. Tente novamente." });
-      }
-      if (err.code === "MULTIPLE_FACES") {
-        return res.status(422).json({ error: "Mais de um rosto detectado. Envie uma foto individual." });
-      }
-      console.error(err.details || err);
-      return res.status(500).json({ error: "Erro ao processar validação" });
-    }
-  }
-);
-
-app.listen(3000, () => console.log("Rodando em http://localhost:3000"));
+bootstrap().catch((error) => {
+  console.error("Failed to start application:", error);
+  process.exit(1);
+});
